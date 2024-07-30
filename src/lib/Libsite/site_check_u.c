@@ -99,6 +99,10 @@ site_check_user_map(void *pobj, int objtype, char *luser)
 	int event_type, event_class;
 	int rc;
 
+#if defined(PBS_SECURITY) && (PBS_SECURITY == KRB5)
+	return -1;
+#endif
+
 	/* set pointer variables etc based on object's type */
 	if (objtype == JOB_OBJECT) {
 		p1 = get_jattr_str(pobj, JOB_ATR_job_owner);
@@ -122,10 +126,6 @@ site_check_user_map(void *pobj, int objtype, char *luser)
 	}
 	if (!strcasecmp(orighost, server_host) && !strcmp(owner, luser))
 		return (0);
-
-#if defined(PBS_SECURITY) && (PBS_SECURITY == KRB5)
-	return 0;
-#endif
 
 #ifdef WIN32
 	rc = ruserok(orighost, isAdminPrivilege(luser), owner, luser);
