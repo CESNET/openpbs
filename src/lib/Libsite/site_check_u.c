@@ -124,16 +124,6 @@ site_check_user_map(void *pobj, int objtype, char *luser)
 	if (!strcasecmp(orighost, server_host) && !strcmp(owner, luser))
 		return (0);
 
-#if defined(PBS_SECURITY) && (PBS_SECURITY == KRB5)
-	/* if this is gss job/resv ignore the rest */
-	if (objtype == JOB_OBJECT && is_jattr_set(pobj, JOB_ATR_cred_id)) {
-		return -1;
-	}
-	if (objtype == RESC_RESV_OBJECT && is_rattr_set(pobj, RESV_ATR_cred_id)) {
-		return -1;
-	}
-#endif
-
 #ifdef WIN32
 	rc = ruserok(orighost, isAdminPrivilege(luser), owner, luser);
 	if (rc == -2) {
@@ -147,7 +137,7 @@ site_check_user_map(void *pobj, int objtype, char *luser)
 		rc = -1;
 	}
 #else
-	rc = ruserok(orighost, 0, owner, luser);
+	rc = (getpwnam(owner) != NULL && getpwnam(luser) != NULL);
 #endif
 
 	return (rc);

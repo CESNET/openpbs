@@ -113,8 +113,6 @@ svr_chk_owner(struct batch_request *preq, job *pjob)
 	char *pu;
 	char *ph;
 	char rmtuser[PBS_MAXUSER + PBS_MAXHOSTNAME + 2];
-	extern int ruserok(const char *rhost, int suser, const char *ruser,
-			   const char *luser);
 
 	/* Are the owner and requestor the same? */
 	snprintf(rmtuser, sizeof(rmtuser), "%s", get_jattr_str(pjob, JOB_ATR_job_owner));
@@ -150,8 +148,7 @@ svr_chk_owner(struct batch_request *preq, job *pjob)
 		/* with flatuid, all that must match is user names */
 		return (strcmp(rmtuser, pu));
 	} else {
-		/* non-flatuid space, must validate rmtuser vs owner */
-		return (ruserok(preq->rq_host, 0, rmtuser, pu));
+		return (getpwnam(rmtuser) != NULL && getpwnam(pu) != NULL);
 	}
 }
 
