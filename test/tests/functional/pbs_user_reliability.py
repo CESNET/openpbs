@@ -265,3 +265,39 @@ j.create_resv_from_job=1
         msg = "qalter: Cannot modify attribute while job running  "
         msg += "create_resv_from_job"
         self.assertIn(msg, c.exception.msg[0])
+
+    @requirements(num_moms=2)
+    def test_flatuid_false_deny(self):
+        """
+        This test tests that a non-valid user on the server is forbidden
+        to submit a job from another host if flatuid=false.
+        The user's existence is checked on the server.
+        """
+        self.logger.info("len moms = %d" % (len(self.moms)))
+        if len(self.moms) < 2:
+            usage_string = 'test requires 2 MoMs as input, ' + \
+                           'use -p "servers=M1,moms=M1:M2"'
+            self.skip_test(usage_string)
+
+        self.fakeuser = 'fakeuser'
+        momB = self.moms.values()[1]
+        cmd = ['useradd', '-d', '/tmp', self.fakeuser]
+        ret = self.du.run_cmd(momB.hostname, cmd=cmd, sudo=True)
+        self.assertTrue(ret['rc'] in [0, 9])  # 9 is already existing user
+
+        self.server.manager(MGR_CMD_SET, SERVER, {'flatuid': False})
+
+        momB = self.moms.values()[1]
+
+        qsub_cmd = os.path.join(self.server.pbs_conf['PBS_EXEC'],
+                                'bin', 'qsub')
+        cmd = [qsub_cmd, '--', momB.sleep_cmd, '100']
+        ret = self.du.run_cmd(momB.hostname, cmd=cmd, runas=self.fakeuser)
+        self.assertEquals(ret['err'][0], "qsub: Unauthorized Request ")
+
+    def tearDown(self):
+        if self.fakeuser is not None and len(self.moms) > 1:
+            momB = self.moms.values()[1]
+            cmd = ['userdel', '-f', self.fakeuser]
+            self.du.run_cmd(momB.hostname, cmd=cmd, sudo=True)
+        TestFunctional.tearDown(self)
