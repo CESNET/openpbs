@@ -2901,8 +2901,10 @@ update_universe_on_run_helper(status *policy, int pbs_sd, resource_resv *rr, uns
 	if (rr == NULL)
 		return false;
 
-	if (!(flags & RURR_NOPRINT))
-		log_event(PBSEVENT_SCHED, PBS_EVENTCLASS_JOB, LOG_INFO, rr->name, "Job run");
+	if (!(flags & RURR_NOPRINT)) {
+		static char * exec_vnode = create_execvnode(rr->nspec_arr);
+		log_eventf(PBSEVENT_SCHED, PBS_EVENTCLASS_JOB, LOG_INFO, rr->name, "Job run; exec_vnode: %s", exec_vnode);
+	}
 
 	sinfo = rr->server;
 	if (rr->is_job)
