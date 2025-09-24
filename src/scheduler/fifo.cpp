@@ -1915,7 +1915,10 @@ add_job_to_calendar(int pbs_sd, status *policy, server_info *sinfo,
 			ctime(&bjob->start));
 
 		log_buf[strlen(log_buf) - 1] = '\0'; /* ctime adds a \n */
-		log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_JOB, LOG_DEBUG, bjob->name, log_buf);
+
+		static char * exec_vnode = create_execvnode(bjob->nspec_arr);
+		log_eventf(PBSEVENT_DEBUG, PBS_EVENTCLASS_JOB, LOG_DEBUG, bjob->name, "%s; exec_vnode: %s",
+			log_buf, exec_vnode);
 	} else if (start_time == 0) {
 		log_event(PBSEVENT_SCHED, PBS_EVENTCLASS_JOB, LOG_WARNING, topjob->name,
 			  "Error in calculation of start time of top job");
