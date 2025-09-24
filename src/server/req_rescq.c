@@ -520,6 +520,7 @@ req_confirmresv(struct batch_request *preq)
 	size_t tmp_buf_size = 0;
 	char buf[PBS_MAXQRESVNAME + PBS_MAXHOSTNAME + 256] = {0}; /* FQDN resvID+text */
 	char *partition_name = NULL;
+	int is_maintenance = 0;
 
 	if ((preq->rq_perm & (ATR_DFLAG_MGWR | ATR_DFLAG_OPWR)) == 0) {
 		req_reject(PBSE_PERM, 0, preq);
@@ -534,6 +535,7 @@ req_confirmresv(struct batch_request *preq)
 	is_degraded = (presv->ri_qs.ri_substate == RESV_DEGRADED || presv->ri_qs.ri_substate == RESV_IN_CONFLICT) ? 1 : 0;
 	is_being_altered = presv->ri_alter.ra_flags;
 	is_confirmed = (presv->ri_qs.ri_substate == RESV_CONFIRMED) ? 1 : 0;
+	is_maintenance = (preq->rq_ind.rq_run.rq_jid[0] == PBS_MNTNC_RESV_ID_CHAR) ? 1 : 0;
 
 	DBPRT(("resv_name=%s, is_degraded=%d, is_being_altered=%d, is_confirmed=%d",
 	       presv->ri_qs.ri_resvID, is_degraded, is_being_altered, is_confirmed));
@@ -560,7 +562,8 @@ req_confirmresv(struct batch_request *preq)
 			set_resv_retry(presv, retry_time);
 
 		} else {
-			if (presv->rep_sched_count >= presv->req_sched_count) {
+			int do_not_delete_resv = 1; /* keep reservation until deleted */
+			if (do_not_delete_resv == 0 && presv->rep_sched_count >= presv->req_sched_count) {
 				/* Clients waiting on an interactive request must be
 				* notified of the failure to confirm
 				*/
@@ -820,10 +823,12 @@ req_confirmresv(struct batch_request *preq)
 		if (p_tmp) {
 			p_tmp += strlen(":partition=");
 			partition_name = strdup(p_tmp);
-		} else
-			partition_name = strdup(DEFAULT_PARTITION);
+		} else {
+			if (! is_maintenance)
+				partition_name = strdup(DEFAULT_PARTITION);
+		}
 
-		if (partition_name == NULL) {
+		if (partition_name == NULL && ! is_maintenance) {
 			req_reject(PBSE_SYSTEM, 0, preq);
 			return;
 		}
