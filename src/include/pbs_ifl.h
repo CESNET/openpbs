@@ -278,6 +278,7 @@ extern "C" {
 #define ATTR_queryother "query_other_jobs"
 #define ATTR_resccost "resources_cost"
 #define ATTR_rescavail "resources_available"
+#define ATTR_resreserved "resources_reserved"
 #define ATTR_maxuserres "max_user_res"
 #define ATTR_maxuserressoft "max_user_res_soft"
 #define ATTR_maxgroupres "max_group_res"
