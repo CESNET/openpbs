@@ -138,6 +138,8 @@ typedef struct th_data_dup_resresv th_data_dup_resresv;
 typedef struct th_data_query_jinfo th_data_query_jinfo;
 typedef struct th_data_free_resresv th_data_free_resresv;
 
+typedef struct resource_reserved resource_reserved;
+
 using counts_umap = std::unordered_map<std::string, counts *>;
 #ifdef NAS
 /* localmod 034 */
@@ -850,6 +852,13 @@ class resource_type
 	resource_type();
 };
 
+struct resource_reserved
+{
+	resdef *def;			/* resource definition */
+	sch_resource_t amount;		/* amount of reserved resource */
+	struct resource_reserved *next;
+};
+
 struct schd_resource
 {
 	const char *name;			/* name of the resource - reference to the definition name */
@@ -866,6 +875,8 @@ struct schd_resource
 	char *str_assigned;		/* the string form of assigned */
 
 	resdef *def;			/* resource definition */
+
+	resource_reserved *reserved;		/* resource amount reserved */
 
 	struct schd_resource *next;	/* next resource in list */
 };

@@ -273,6 +273,7 @@ query_nodes(int pbs_sd, server_info *sinfo)
 			ATTR_NODE_Sharing,
 			ATTR_NODE_License,
 			ATTR_rescavail,
+			ATTR_resreserved, /* must be after ATTR_rescavail */
 			ATTR_rescassn,
 			ATTR_NODE_NoMultiNode,
 			ATTR_ResvEnable,
@@ -418,6 +419,72 @@ query_nodes(int pbs_sd, server_info *sinfo)
 	return ninfo_arr;
 }
 
+void
+parse_resource_reserved(schd_resource *res, char *resources_reserved)
+{
+	char *tok;
+	char *ptr;
+	char name[1024];
+	char name_by[1024];
+	char *value;
+	char *endp;
+	char *tmp;
+	char *resources_reserved_dup;
+	resdef *rdef;
+	int len = 0;
+	resource_reserved *res_reserved;
+	resource_reserved *next;
+
+	if (resources_reserved == NULL)
+		return;
+
+	if ((resources_reserved_dup = strdup(resources_reserved)) == NULL)
+		return;
+
+	tok = strtok(resources_reserved_dup, ",");
+	while (tok != NULL) {
+		ptr = strchr(tok, ':');
+		if (ptr == NULL) {
+			tok = strtok(NULL, ",");
+			continue;
+		}
+
+		len = ptr - tok;
+		strncpy(name, tok, len);
+		name[len] = '\0';
+
+		if (strcmp(res->name, name) == 0) {
+			value = strchr(ptr, '=');
+			if (value == NULL) {
+				tok = strtok(NULL, ",");
+				continue;
+			}
+
+			len = value - ptr - 1;
+			strncpy(name_by, ptr + 1, len);
+			name_by[len] = '\0';
+
+			rdef = find_resdef(name_by);
+
+			if (rdef != NULL) {
+				res_reserved = create_resource_reserved(rdef, strtol(value + 1, &endp, 10));
+
+				if (res_reserved != NULL) {
+					next = res->reserved;
+					res_reserved->next = next;
+					res->reserved = res_reserved;
+				}
+			}
+		}
+
+        tok = strtok(NULL, ",");
+    }
+
+	free(resources_reserved_dup);
+
+	return;
+}
+
 /**
  * @brief
  *      query_node_info	- collect information from a batch_status and
@@ -439,6 +506,7 @@ query_node_info(struct batch_status *node, server_info *sinfo)
 	char *endp;	      /* end pointer for strtol */
 	int check_expiry = 0;
 	time_t expiry = 0;
+	char *resources_reserved = NULL;
 
 	if ((ninfo = new node_info(node->name)) == NULL)
 		return NULL;
@@ -527,6 +595,8 @@ query_node_info(struct batch_status *node, server_info *sinfo)
 					break;
 				}
 
+				parse_resource_reserved(res, resources_reserved);
+
 				/* Round memory off to the nearest megabyte */
 				if (res->def == allres["mem"])
 					res->avail -= (long) res->avail % 1024;
@@ -534,6 +604,8 @@ query_node_info(struct batch_status *node, server_info *sinfo)
 				site_set_node_share(ninfo, res);
 #endif /* localmod 034 */
 			}
+		} else if (!strcmp(attrp->name, ATTR_resreserved)) {
+				resources_reserved = attrp->value;
 		} else if (!strcmp(attrp->name, ATTR_rescassn)) {
 			res = find_alloc_resource_by_str(ninfo->res, attrp->resource);
 

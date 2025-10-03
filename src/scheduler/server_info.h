@@ -438,4 +438,8 @@ status *dup_status(status *ost);
 
 struct batch_status *send_statserver(int virtual_fd, struct attrl *attrib, char *extend);
 
+resource_reserved *create_resource_reserved(resdef *rdef, sch_resource_t amount);
+resource_reserved *dup_resource_reserved_list(resource_reserved *r);
+void free_resource_reserved_list(resource_reserved *r);
+
 #endif /* _SERVER_INFO_H */
