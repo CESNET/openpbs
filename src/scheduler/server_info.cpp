@@ -1087,6 +1087,9 @@ free_resource(schd_resource *resp)
 	if (resp->str_assigned != NULL)
 		free(resp->str_assigned);
 
+	if (resp->reserved != NULL)
+		free_resource_reserved_list(resp->reserved);
+
 	free(resp);
 }
 
@@ -1196,6 +1199,7 @@ new_resource()
 	resp->str_assigned = NULL;
 	resp->assigned = RES_DEFAULT_ASSN;
 	resp->avail = RES_DEFAULT_AVAIL;
+	resp->reserved = NULL;
 
 	return resp;
 }
@@ -2362,6 +2366,9 @@ dup_resource(schd_resource *res)
 
 	if (res->str_assigned != NULL)
 		nres->str_assigned = string_dup(res->str_assigned);
+
+	if (res->reserved != NULL)
+		nres->reserved = dup_resource_reserved_list(res->reserved);
 
 	nres->avail = res->avail;
 	nres->assigned = res->assigned;
@@ -3755,4 +3762,63 @@ dup_unordered_nodes(node_info **old_unordered_nodes, node_info **nnodes)
 	new_unordered_nodes[ct1] = NULL;
 
 	return new_unordered_nodes;
+}
+
+resource_reserved *
+create_resource_reserved(resdef *rdef, sch_resource_t amount)
+{
+	resource_reserved *r;
+
+	if (rdef == NULL)
+		return NULL;
+
+	if (amount == 0)
+		return NULL;
+
+	if ((r = static_cast<resource_reserved *>(calloc(1, sizeof(resource_reserved)))) == NULL) {
+		log_err(errno, __func__, MEM_ERR_MSG);
+		return NULL;
+	}
+
+	r->def = rdef;
+	r->amount = amount;
+	r->next = NULL;
+
+	return r;
+}
+
+resource_reserved *
+dup_resource_reserved_list(resource_reserved *r) {
+	resource_reserved *nrr = NULL;
+	resource_reserved *prev = NULL;
+	resource_reserved *head = NULL;
+
+	if (r == NULL)
+		return NULL;
+
+	for (resource_reserved *reserved = r; reserved != NULL; reserved = reserved->next) {
+		nrr = create_resource_reserved(reserved->def, reserved->amount);
+		if (prev == NULL)
+			head = nrr;
+		else
+			prev->next = nrr;
+		prev = nrr;
+	}
+	return head;
+}
+
+void
+free_resource_reserved_list(resource_reserved *r)
+{
+	resource_reserved *rp, *tmp;
+
+	if (r == NULL)
+		return;
+
+	rp = r;
+	while (rp != NULL) {
+		tmp = rp->next;
+		free(rp);
+		rp = tmp;
+	}
 }
