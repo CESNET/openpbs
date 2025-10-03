@@ -1190,6 +1190,48 @@ match_resource(schd_resource *res, resource_req *resreq, unsigned int flags, enu
 	return num_chunk;
 }
 
+sch_resource_t
+get_res_reserved_amount(schd_resource *res, schd_resource *reslist, resource_req *reqlist)
+{
+	sch_resource_t reserved_amount = 0;
+	schd_resource *by_resource = NULL;
+	sch_resource_t tmp = 0;
+	sch_resource_t req_amount;
+
+	if (res->type.is_consumable != 1 || res->type.is_num != 1)
+		return reserved_amount;
+
+	for (resource_reserved *reserved = res->reserved; reserved != NULL; reserved = reserved->next) {
+
+		if (reserved->amount > 0) {
+
+			by_resource = find_resource(reslist, reserved->def);
+
+			if (by_resource == NULL ||
+			    by_resource->type.is_consumable != 1 ||
+			    by_resource->type.is_num != 1) {
+				continue;
+			}
+
+			req_amount = 0;
+			for (resource_req *resreq = reqlist; resreq != NULL; resreq = resreq->next) {
+				if (reserved->def == resreq->def && resreq->amount > 0) {
+					req_amount = resreq->amount;
+					break;
+				}
+			}
+
+			tmp = reserved->amount * (by_resource->avail - by_resource->assigned - req_amount);
+
+			if (reserved_amount < tmp) {
+				reserved_amount = tmp;
+			}
+		}
+	}
+
+	return reserved_amount;
+}
+
 /**
  *
  * @brief
@@ -1230,6 +1272,7 @@ check_avail_resources(schd_resource *reslist, resource_req *reqlist,
 	int any_fail = 0;
 	schd_error *prev_err = NULL;
 	schd_error *err;
+	sch_resource_t reserved_amount;
 
 	if (reslist == NULL || reqlist == NULL) {
 		if (perr != NULL)
@@ -1248,7 +1291,15 @@ check_avail_resources(schd_resource *reslist, resource_req *reqlist,
 			if (res == NULL)
 				continue;
 
+			if ((reserved_amount = get_res_reserved_amount(res, reslist, reqlist)) > 0) {
+				res->avail -= reserved_amount;
+			}
+
 			match_chunk = match_resource(res, resreq, flags, fail_code, err);
+
+			if (reserved_amount > 0) {
+				res->avail += reserved_amount;
+			}
 
 			if (num_chunk == SCHD_INFINITY)
 				num_chunk = match_chunk;
@@ -1297,6 +1348,7 @@ check_avail_resources(schd_resource *reslist, resource_req *reqlist,
 	int any_fail = 0;
 	schd_error *prev_err = NULL;
 	schd_error *err;
+	sch_resource_t reserved_amount;
 
 	if (reslist == NULL || reqlist == NULL) {
 		if (perr != NULL)
@@ -1312,7 +1364,15 @@ check_avail_resources(schd_resource *reslist, resource_req *reqlist,
 		if (res == NULL)
 			continue;
 
+		if ((reserved_amount = get_res_reserved_amount(res, reslist, reqlist)) > 0) {
+			res->avail -= reserved_amount;
+		}
+
 		match_chunk = match_resource(res, resreq, flags, fail_code, err);
+
+		if (reserved_amount > 0) {
+			res->avail += reserved_amount;
+		}
 
 		if (num_chunk == SCHD_INFINITY)
 			num_chunk = match_chunk;
