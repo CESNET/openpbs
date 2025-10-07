@@ -5120,6 +5120,9 @@ char
 {
 	job *pjob = (job*)GET_NEXT(svr_alljobs);
 	int first = 1;
+	int found;
+	char *ret_string_dup;
+	char *tok;
 
 	strcpy(ret_string," ");
 
@@ -5127,10 +5130,25 @@ char
 		char *euser = pjob->ji_wattr[(int)JOB_ATR_euser].at_val.at_str;
 
 		/* check for duplicated entries */
-		char *dupl = strstr(ret_string,euser);
-		if (dupl != NULL) {
-			if (dupl[strlen(euser)] == ',' || dupl[strlen(euser)] == '\0' )
-				continue;
+		if ((ret_string_dup = strdup(ret_string + 1)) == NULL) { /* +1 for space on beginning */
+			perror("strdup");
+			return(ret_string);
+		}
+
+		found = 0;
+		tok = strtok(ret_string_dup, ",");
+		while (tok != NULL) {
+			if (strcmp(tok, euser) == 0) {
+				found = 1;
+				break;
+			}
+
+			tok = strtok(NULL, ",");
+		}
+		free(ret_string_dup);
+
+		if (found) {
+			continue;
 		}
 
 		if (!first) {
