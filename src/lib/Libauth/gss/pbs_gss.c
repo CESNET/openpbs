@@ -693,12 +693,6 @@ init_pbs_client_ccache_from_keytab(char *err_buf, int err_buf_size)
 		goto out;
 	}
 
-	ret = krb5_cc_new_unique(context, "FILE", NULL, &ccache);
-	if (ret) {
-		snprintf(err_buf, err_buf_size, "Failed to create ccache (%s)", krb5_get_error_message(context, ret));
-		goto out;
-	}
-
 	ret = krb5_cc_resolve(context, PBS_KRB5_CLIENT_CCNAME, &ccache);
 	if (ret) {
 		snprintf(err_buf, err_buf_size, "Couldn't resolve cache name (%s)", krb5_get_error_message(context, ret));
