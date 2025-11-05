@@ -209,3 +209,29 @@ foo\n
         exp_string = 'ENV_TEST=N:\\\\\\\\aa\\\\\\\\bb\\\\\\\\cc\\\\\\\\dd'
         exp_string += '\\\\\\\\ee\\\\\\\\ff\\\\\\\\gg\\\\\\\\hh\\\\\\\\ii'
         self.assertIn(exp_string, var_list)
+
+    def test_passing_non_ascii_env(self):
+        """
+        Test to verify that job is able to process
+        non-ascii env attribute.
+        """
+
+        import locale
+        target_locale = 'cs_CZ.UTF-8'
+        try:
+            locale.setlocale(locale.LC_ALL, target_locale)
+        except:
+            msg = f"Target locale ${target_locale} not available."
+            self.skipTest(msg)
+
+        env = "VAR=ěščřžýáíéů"
+
+        a = {ATTR_v: env}
+        j = Job(TEST_USER, attrs=a)
+        jid = self.server.submit(j)
+        self.server.expect(JOB, {'job_state': 'R'}, id=jid)
+        qstat = self.server.status(JOB, ATTR_v, id=jid)
+        var_list = qstat[0]['Variable_List'].split(",")
+
+        exp_string = f"VAR=ěščřžýáíéů"
+        self.assertIn(exp_string, var_list)
