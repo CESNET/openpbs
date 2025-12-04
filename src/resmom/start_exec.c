@@ -3661,9 +3661,11 @@ finish_exec(job *pjob)
 		auth_method = arst_string("PBS_O_INTERACTIVE_AUTH_METHOD", get_jattr(pjob, JOB_ATR_variables));
 		if ((auth_method == NULL) ||
 		    ((auth_method = strchr(auth_method, (int) '=')) == NULL)) {
+/* temporary disable check to allow old client to connect
 			log_joberr(-1, __func__, "PBS_O_INTERACTIVE_AUTH_METHOD not set",
 				   pjob->ji_qs.ji_jobid);
 			starter_return(upfds, downfds, JOB_EXEC_FAIL1, &sjr);
+*/
 		}
 
 		/* get qsub prefered encrypt method */
@@ -3671,12 +3673,18 @@ finish_exec(job *pjob)
 		encrypt_method = arst_string("PBS_O_INTERACTIVE_ENCRYPT_METHOD", get_jattr(pjob, JOB_ATR_variables));
 		if ((encrypt_method == NULL) ||
 		    ((encrypt_method = strchr(encrypt_method, (int) '=')) == NULL)) {
+/* temporary disable check to allow old client to connect
 			log_joberr(-1, __func__, "PBS_O_INTERACTIVE_ENCRYPT_METHOD not set",
 				   pjob->ji_qs.ji_jobid);
 			starter_return(upfds, downfds, JOB_EXEC_FAIL1, &sjr);
+*/
 		}
 
 		/* Verify prefered auth is supported */
+/* temporary change to allow old client to connect */
+if (auth_method == NULL) {
+	qsub_sock = conn_qsub(phost + 1, get_jattr_long(pjob, JOB_ATR_interactive));
+} else {
 		if (is_string_in_arr(pbs_conf.supported_auth_methods, auth_method+1)) {
 			log_eventf(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, LOG_INFO, pjob->ji_qs.ji_jobid,
 				"interactive authentication method = %s", auth_method+1);
@@ -3689,6 +3697,7 @@ finish_exec(job *pjob)
 			sprintf(log_buffer, "interactive authentication method %s not supported", auth_method +1);
 			log_err(errno, __func__, log_buffer);
 		}
+}
 
 		if (qsub_sock < 0) {
 			sprintf(log_buffer, "cannot open qsub sock for %s",
@@ -3729,12 +3738,15 @@ finish_exec(job *pjob)
 			}
 		}
 
+/* temporary change to allow old client to connect */
+if (auth_method != NULL) {
 		ret = auth_with_qsub(qsub_sock, get_jattr_long(pjob, JOB_ATR_interactive),
 				     phost + 1, auth_method + 1, encrypt_method + 1, pjob->ji_qs.ji_jobid);
 		if (ret != INTERACTIVE_AUTH_SUCCESS) {
 			log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_JOB, LOG_ERR, pjob->ji_qs.ji_jobid, "Failed to authenticate with qsub");
 			starter_return(upfds, downfds, JOB_EXEC_FAIL1, &sjr);
 		}
+}
 
 		/* send job id as validation to qsub */
 		if (transport_chan_get_ctx_status(qsub_sock, FOR_ENCRYPT) == (int) AUTH_STATUS_CTX_READY) {
@@ -4003,6 +4015,14 @@ finish_exec(job *pjob)
 									       JOB_EXEC_FAIL2, &sjr);
 							}
 						}
+/* temporary change to allow old client to connect */
+if (auth_method == NULL) {
+	port_forwarder(socks, conn_qsub, phost + 1,
+		get_jattr_long(pjob, JOB_ATR_X11_port),
+		qsub_sock, mom_get_reader_Xjob,
+		log_mom_portfw_msg,
+		EXEC_HOST_SIDE, NULL, NULL, pjob->ji_qs.ji_jobid);
+} else
 						if (strcmp(auth_method+1, AUTH_RESVPORT_NAME) == 0) {
 							port_forwarder(socks, conn_qsub_resvport, phost + 1,
 									get_jattr_long(pjob, JOB_ATR_X11_port),

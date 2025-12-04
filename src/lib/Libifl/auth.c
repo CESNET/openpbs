@@ -1047,8 +1047,10 @@ auth_exec_socket(int sock, struct sockaddr_in *from, char *auth_method, char *en
 
 	if (strcmp(auth_method, AUTH_RESVPORT_NAME) == 0) {
 		/* For resvport, simply verify that the remote port is prvileged */
+/* temporary disable check to allow old mom to connect
 		if (port >= IPPORT_RESERVED)
 			return INTERACTIVE_AUTH_RETRY;
+*/
 	}
 
 	if ((strcmp(auth_method, AUTH_MUNGE_NAME) == 0)) {

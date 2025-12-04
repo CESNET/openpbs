@@ -278,6 +278,8 @@ port_forwarder(
 					(socks + peersock)->sock = connfunc(phost, pport);
 
 					/* authenticate with qsub side */
+/* temporary change to allow old client to connect */
+if (auth_method != NULL)
 					if (is_qsub_side == EXEC_HOST_SIDE) {
 						if (auth_with_qsub((socks + peersock)->sock, pport, phost, auth_method, encrypt_method, jobid) != 0) {
 							snprintf(err_msg, sizeof(err_msg),
