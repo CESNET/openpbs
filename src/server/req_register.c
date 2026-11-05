@@ -544,9 +544,15 @@ post_doq(struct work_task *pwt)
 				   "%s%s reply code=%d", msg_regrej, preq->rq_ind.rq_register.rq_parent, preq->rq_reply.brp_code);
 
 		pjob = find_job(jobid);
+		log_buffer[0] = '\0';
 		if ((msg = pbse_to_txt(preq->rq_reply.brp_code)) != NULL) {
-			(void) strcat(log_buffer, " ");
-			(void) strcat(log_buffer, msg);
+			if (strlen(msg) > LOG_BUF_SIZE - strlen(log_buffer) - 1) {
+				(void) strncat(log_buffer, msg, LOG_BUF_SIZE - strlen(log_buffer) - 1 - 3);
+				(void) strcat(log_buffer, "...");
+				log_buffer[LOG_BUF_SIZE - 1] = '\0';
+			} else {
+				(void) strcat(log_buffer, msg);
+			}
 		}
 		if (pjob) {
 			ppjob = find_job(preq->rq_ind.rq_register.rq_parent);
